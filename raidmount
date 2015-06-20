@@ -430,16 +430,12 @@ mnt.mount.delete = function(path)
 	end
 end
 
-mnt.mount.get = function(origin, destination)
+mnt.mount.get = function(origin)
 	if string.sub(origin, 1, 1) ~= "/" then origin = "/"..origin end
-	local handle = io.open(destination, "w")
-	if handle then
-		handle:write(files[origin])
-		handle:close()
-	end
+	return files[origin]
 end
 
-mnt.mount.put = function(origin, destination)
+mnt.mount.put = function(data, destination)
 	if string.sub(destination, 1, 1) ~= "/" then destination = "/"..destination end
 	local destinationPath
 	for i = 1, #paths do
@@ -451,16 +447,13 @@ mnt.mount.put = function(origin, destination)
 		destinationPath = {path = destination}
 		table.insert(paths, destinationPath)
 	end
-	local handle = io.open(origin, "r")
-	if handle then
-		files[destination] = handle:read("*a")
-		destinationPath.size = #files[destination]
-		handle:close()
-		textToBinary(destination)
-		splitBinary(destination)
-		buildData()
-		writeData()
-	end
+	
+	files[destination] = data
+	destinationPath.size = #files[destination]
+	textToBinary(destination)
+	splitBinary(destination)
+	buildData()
+	writeData()
 end
 
 table.insert(LyqydOS.fs.mounts, mnt)
