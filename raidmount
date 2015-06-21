@@ -39,8 +39,8 @@ for i, drive in ipairs(drives) do
 		if label then
 			local volume, id, total = string.match(label, "^(%w+): (%d+)/(%d+)")
 			id = tonumber(id)
-			data[id] = {}
 			if volume == args[1] then
+				data[id] = {}
 				if not arrayDrives[id] then count = count + 1 end
 				arrayDrives[id] = drive
 				max = math.max(max, tonumber(total))
@@ -278,7 +278,7 @@ if max > 0 and paths then
 				local parity = parityByteOfRow(dataCursor, max)
 				for k = 1, max do
 					if k ~= parity then
-						if j < pathInfo.stripeCount or k <= pathInfo.lastByte then
+						if j <= pathInfo.stripeCount or k <= pathInfo.lastByte then
 							file[#file + 1] = data[k][dataCursor]
 						end
 					end
@@ -447,7 +447,7 @@ mnt.mount.put = function(data, destination)
 		destinationPath = {path = destination}
 		table.insert(paths, destinationPath)
 	end
-	
+
 	files[destination] = data
 	destinationPath.size = #files[destination]
 	textToBinary(destination)
