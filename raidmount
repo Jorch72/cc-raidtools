@@ -15,8 +15,6 @@ end
 
 local driveRoot = shell.resolve(args[2])
 
---files table is keyed by path, value is textual file contents.  When these are changed, we re-generate the binary, binary striped versions and re-write it to the disks.
-local files = {}
 --binaryFiles table is keyed by path, value is table of binary file contents.  When this is changed, we re-generate the textual, binary striped versions and re-write it to the disks.
 local binaryFiles = {}
 --binarySplitFiles table is keyed by path, then drive index, values are tables of binary file contents, split out by stripe with parity bytes.
@@ -87,16 +85,6 @@ for i, path in ipairs(paths) do
 		if path.lastByte == 0 then path.lastByte = max - 1 end
 		if path.lastByte >= parityByteOfRow(path.stripeCount, max) then path.lastByte = path.lastByte + 1 end
 	end
-end
-
-local function binaryToText(path)
-	--convert the binary representation of a file to its textual representation and write it to the table
-	files[path] = string.char(unpack(binaryFiles[path]))
-end
-
-local function textToBinary(path)
-	--convert the textual represntation of a file to its binary represenation and write it to the table
-	binaryFiles[path] = {string.byte(files[path], 1, -1)}
 end
 
 local function splitBinary(path)
@@ -291,7 +279,6 @@ if max > 0 and paths then
 				dataCursor = dataCursor + 1
 			end
 			binaryFiles[pathInfo.path] = file
-			binaryToText(pathInfo.path)
 		end
 	end
 	--files should be set up now.
@@ -338,7 +325,7 @@ end
 
 mnt.mount.getSize = function(path)
 	if string.sub(path, 1, 1) ~= "/" then path = "/"..path end
-	return files[path] and #files[path] or 0
+	return binaryFiles[path] and #binaryFiles[path] or 0
 end
 
 mnt.mount.getFreeSpace = function(path)
@@ -377,8 +364,6 @@ mnt.mount.move = function(origin, destination)
 	for i = 1, #paths do
 		if paths[i].path == origin then
 			paths[i].path = destination
-			files[destination] = files[origin]
-			files[origin] = nil
 			binaryFiles[destination] = binaryFiles[origin]
 			binaryFiles[origin] = nil
 			binarySplitFiles[destination] = binarySplitFiles[origin]
@@ -408,7 +393,6 @@ mnt.mount.copy = function(origin, destination)
 		table.insert(paths, destinationPath)
 	end
 	destinationPath.size = originPath.size
-	files[destination] = files[origin]
 	binaryFiles[destination] = binaryFiles[origin]
 	binarySplitFiles[destination] = binarySplitFiles[origin]
 	buildData()
@@ -419,7 +403,6 @@ mnt.mount.delete = function(path)
 	if string.sub(path, 1, 1) ~= "/" then path = "/"..path end
 	for i = 1, #paths do
 		if paths[i].path == path then
-			files[path] = nil
 			binaryFiles[path] = nil
 			binarySplitFiles[path] = nil
 			table.remove(paths, i)
@@ -432,7 +415,7 @@ end
 
 mnt.mount.get = function(origin)
 	if string.sub(origin, 1, 1) ~= "/" then origin = "/"..origin end
-	return files[origin]
+	return binaryFiles[origin]
 end
 
 mnt.mount.put = function(destination, data)
@@ -448,9 +431,8 @@ mnt.mount.put = function(destination, data)
 		table.insert(paths, destinationPath)
 	end
 
-	files[destination] = data
-	destinationPath.size = #files[destination]
-	textToBinary(destination)
+	binaryFiles[destination] = data
+	destinationPath.size = #binaryFiles[destination]
 	splitBinary(destination)
 	buildData()
 	writeData()
