@@ -37,7 +37,7 @@ for i, drive in ipairs(drives) do
 	if drive.isDiskPresent() then
 		local label = drive.getDiskLabel()
 		if label then
-			local volume, id, total = string.match(label, "^(%w+): (%d+)/(%d+)")
+			local volume, id, total = string.match(label, "^(%C+): (%d+)/(%d+)")
 			id = tonumber(id)
 			if volume == args[1] then
 				data[id] = {}
@@ -275,10 +275,10 @@ if max > 0 and paths then
 			local file = {}
 			local pathInfo = paths[i]
 			for j = 1, pathInfo.stripeCount do
-				local parity = parityByteOfRow(dataCursor, max)
+				local parity = parityByteOfRow(j, max)
 				for k = 1, max do
 					if k ~= parity then
-						if j <= pathInfo.stripeCount or k <= pathInfo.lastByte then
+						if j < pathInfo.stripeCount or (j == pathInfo.stripeCount and k <= pathInfo.lastByte) then
 							file[#file + 1] = data[k][dataCursor]
 						end
 					end
@@ -435,7 +435,7 @@ mnt.mount.get = function(origin)
 	return files[origin]
 end
 
-mnt.mount.put = function(data, destination)
+mnt.mount.put = function(destination, data)
 	if string.sub(destination, 1, 1) ~= "/" then destination = "/"..destination end
 	local destinationPath
 	for i = 1, #paths do
