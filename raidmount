@@ -87,6 +87,15 @@ for i, path in ipairs(paths) do
 	end
 end
 
+local function yield()
+	local key = tostring({})
+	os.queueEvent("raid_yield", key)
+	local event, val
+	repeat
+		event, val = os.pullEvent()
+	until event == "raid_yield" and val == key
+end
+
 local function splitBinary(path)
 	--convert the binary file out to the several disk-specific tables, striping it and interlacing the parity bytes.
 	local file = binaryFiles[path]
@@ -160,6 +169,9 @@ local function doWriteData(id, drive)
 	if handle then
 		for j = 1, #data[id] do
 			handle:write(data[id][j])
+			if j % 1000 == 0 then
+				yield()
+			end
 		end
 		handle:close()
 	else
@@ -206,6 +218,9 @@ if max > 0 and paths then
 					data[i][dataCursor] = byte
 					dataCursor = dataCursor + 1
 					byte = handle.read()
+					if dataCursor % 1000 == 0 then
+						yield()
+					end
 				end
 				handle.close()
 			else
